@@ -49,10 +49,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        expenseManager = new PersistentExpenseManager(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        System.out.println("done");
+        expenseManager = new PersistentExpenseManager(getApplicationContext());
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         // Create the adapter that will return a fragment for each of the three
