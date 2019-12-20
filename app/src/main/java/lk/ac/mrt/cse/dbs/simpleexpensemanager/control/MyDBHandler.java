@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.SimpleFormatter;
+
 
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.exception.InvalidAccountException;
 import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Account;
@@ -21,8 +21,8 @@ import lk.ac.mrt.cse.dbs.simpleexpensemanager.data.model.Transaction;
 public class MyDBHandler extends SQLiteOpenHelper {
 
     //information of database
-    private static final int DATABASE_VERSION = 2;
-    private static final String DATABASE_NAME = "projectDB.db";
+    private static final int DATABASE_VERSION = 30;
+    private static final String DATABASE_NAME = "170517G.db";
     public static final String TABLE_NAME1 = "AccountTable";
     public static final String TABLE_NAME2 = "TransactionTable";
     public static final String COLUMN_11 = "accountNo";
@@ -41,17 +41,19 @@ public class MyDBHandler extends SQLiteOpenHelper {
     }
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String CREATE_TABLE1 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME1 + "(" + COLUMN_11 +
-                "TEXT PRIMARY KEY," + COLUMN_12 + "TEXT,"+COLUMN_13+"TEXT," +COLUMN_14+"REAL)";
+        String CREATE_TABLE1 = "CREATE TABLE "+TABLE_NAME1+"("+COLUMN_11 +
+                " TEXT , " + COLUMN_12 + " TEXT, "+COLUMN_13+" TEXT," +COLUMN_14+" REAL)";
         db.execSQL(CREATE_TABLE1);
-        String CREATE_TABLE2 = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME2 + "(" + COLUMN_21 +
-                "TEXT PRIMARY KEY," + COLUMN_22 + "TEXT,"+COLUMN_23+"REAL," +COLUMN_24+"DATE)";
+        String CREATE_TABLE2 = "CREATE TABLE "+TABLE_NAME2+"("+COLUMN_21 +
+                " TEXT , " + COLUMN_22 + " TEXT, "+COLUMN_23+" REAL," +COLUMN_24+" DATE)";
         db.execSQL(CREATE_TABLE2);
     }
 
 
-    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-
+    public void onUpgrade(SQLiteDatabase db, int i, int i1) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME1);
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME2);
+        onCreate(db);
     }
 
     public List<Account> getAccountsList() {
@@ -64,22 +66,24 @@ public class MyDBHandler extends SQLiteOpenHelper {
             array_list.add(account);
             res.moveToNext();
         }
+        res.close();
         return array_list;
 
     }
 
 
-    public Account getAccount(String accountNo) throws InvalidAccountException {
+    public Account getAccount(String accountNo)  {
         SQLiteDatabase db = this.getReadableDatabase();
-        Cursor res = db.rawQuery("select * from " + TABLE_NAME1+"WHERE accountNo="+accountNo, null);
-        if(res.moveToFirst()) {
-            Account account = new Account(res.getString(res.getColumnIndex("accountNo")), res.getString(res.getColumnIndex("bankName")), res.getString(res.getColumnIndex("bankHolderName")), res.getDouble(res.getColumnIndex("balance")));
-            return account;
+
+        Cursor res = db.rawQuery("select * from " + TABLE_NAME1+" WHERE "+COLUMN_11+" = ?",new String[] { accountNo } );
+        if( res != null && res.moveToFirst()){
+            Account account=new Account(res.getString(res.getColumnIndex(COLUMN_11)), res.getString(res.getColumnIndex(COLUMN_12)), res.getString(res.getColumnIndex(COLUMN_13)), res.getDouble(res.getColumnIndex(COLUMN_14)));
+            res.close();
+            return  account;
         }
-        String msg = "Account " + accountNo + " is invalid.";
-        throw new InvalidAccountException(msg);
-
-
+        else {
+            return null;
+        }
     }
 
     public void addAccount(Account account) {
@@ -137,10 +141,11 @@ public class MyDBHandler extends SQLiteOpenHelper {
         Cursor res = db.rawQuery("select * from " + TABLE_NAME1, null);
         res.moveToFirst();
         while (res.isAfterLast() ==false){
-            System.out.println(res.getColumnIndex("accountNo"));
+
             array_list.add(res.getString(res.getColumnIndex("accountNo")));
             res.moveToNext();
         }
+        res.close();
         return array_list;
     }
 
@@ -163,9 +168,8 @@ public class MyDBHandler extends SQLiteOpenHelper {
         res.moveToFirst();
         while (res.isAfterLast() ==false){
 
-            Date date = null;
             try {
-                date = new SimpleDateFormat("dd/mm/yyyy").parse(res.getString(res.getColumnIndex("date")));
+                Date date = new SimpleDateFormat("dd/mm/yyyy").parse(res.getString(res.getColumnIndex("date")));
                 double amount=res.getDouble(res.getColumnIndex("amount"));
                 ExpenseType expenseType=ExpenseType.INCOME;
                 if (res.getString(res.getColumnIndex("expenseType"))=="Expense"){
@@ -179,6 +183,7 @@ public class MyDBHandler extends SQLiteOpenHelper {
             }
 
         }
+        res.close();
         return array_list;
 
     }
@@ -190,13 +195,11 @@ public class MyDBHandler extends SQLiteOpenHelper {
         Cursor res = db.rawQuery("select * from " + TABLE_NAME2+" order by "+COLUMN_24+" DESC limit "+limit, null);
         res.moveToFirst();
         while (res.isAfterLast() ==false){
-
-            Date date = null;
             try {
-                date = new SimpleDateFormat("dd/mm/yyyy").parse(res.getString(res.getColumnIndex("date")));
-                double amount=res.getDouble(res.getColumnIndex("amount"));
+                Date date = new SimpleDateFormat("dd/mm/yyyy").parse(res.getString(res.getColumnIndex("date")));
+                double amount=res.getDouble(res.getColumnIndex(COLUMN_23));
                 ExpenseType expenseType=ExpenseType.INCOME;
-                if (res.getString(res.getColumnIndex("expenseType"))=="Expense"){
+                if (res.getString(res.getColumnIndex(COLUMN_22))=="Expense"){
                     expenseType = ExpenseType.EXPENSE;
                 }
                 Transaction transaction=new Transaction(date,res.getString(res.getColumnIndex("accountNo")),expenseType,amount);
@@ -207,7 +210,10 @@ public class MyDBHandler extends SQLiteOpenHelper {
             }
 
         }
+        res.close();
         return array_list;
+
+
 
     }
 }
